@@ -88,7 +88,7 @@ export const QrReader: React.FC = () => {
     try {
       const imageData = drawVideoToCanvas(videoRef.current, tmpCanvasContext.current);
       const qrCodeData = decodeQRFromCanvas(imageData);
-      if (!qrCodeData) {
+      if (!qrCodeData || qrCodeData.data === null || qrCodeData.binaryData.length === 0) {
         requestAnimationFrame(scanQRCode);
         return;
       }
