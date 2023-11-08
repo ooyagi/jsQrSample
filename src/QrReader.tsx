@@ -156,7 +156,7 @@ export const QrReader: React.FC<QrReaderProps> = ({ videoViewWidth, videoViewHei
   return (
     <div>
       <video ref={videoRef} style={{ display: scanning ? 'block' : 'none' }} width={videoViewWidth} height={videoViewHeight} autoPlay />
-      <canvas ref={imgCanvasRef} style={{ display: scanning ? 'none' : 'block' }} width={videoViewWidth} height={videoViewHeight} />
+      <canvas ref={imgCanvasRef} style={{ display: scanning ? 'none' : 'block', border: 'solid ' }} width={videoViewWidth} height={videoViewHeight} />
       <canvas ref={tmpCanvasRef} style={{ display: 'none' }} />
       <div>
         <p>QR Code: {qrCode}</p>
