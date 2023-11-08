@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import jsQR from 'jsqr';
+import jsQR, { QRCode } from 'jsqr';
 
 // カメラへのアクセスを要求し、videoRefにストリームを設定
 async function setCameraStream(videoElement: HTMLVideoElement, facingMode: 'user' | 'environment' = 'environment'): Promise<void> {
@@ -23,13 +23,25 @@ function drawVideoToCanvas(videoElement: HTMLVideoElement, canvasElement: HTMLCa
   }
   return null;
 }
-// CanvasからQRコードを解析
-function decodeQRFromCanvas(imageData: ImageData | null): string | null {
-  if (imageData) {
-    const qrCode = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
-    return qrCode ? qrCode.data : null;
+// Canvasに矩形を描画
+function drawRectToCanvas(canvasElement: HTMLCanvasElement, location: QRCode['location']) {
+  const context = canvasElement.getContext('2d');
+  if (context) {
+    context.beginPath();
+    context.moveTo(location.topLeftCorner.x, location.topLeftCorner.y);
+    context.lineTo(location.topRightCorner.x, location.topRightCorner.y);
+    context.lineTo(location.bottomRightCorner.x, location.bottomRightCorner.y);
+    context.lineTo(location.bottomLeftCorner.x, location.bottomLeftCorner.y);
+    context.lineTo(location.topLeftCorner.x, location.topLeftCorner.y);
+
+    context.lineWidth = 5;
+    context.strokeStyle = 'red';
+    context.stroke();
   }
-  return null;
+}
+// CanvasからQRコードを解析
+function decodeQRFromCanvas(imageData: ImageData | null): QRCode | null {
+  return imageData ? jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' }) : null;
 }
 // ストリームを停止
 const stopStream = (videoElement: HTMLVideoElement) => {
@@ -41,10 +53,12 @@ const stopStream = (videoElement: HTMLVideoElement) => {
 
 export const QrReader: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const tmpCanvasRef = useRef<HTMLCanvasElement>(null);
+  const imgCanvasRef = useRef<HTMLCanvasElement>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
-  const [scanning, setScanning] = useState(false);
+  const [scanning, setScanning] = useState<boolean>(false);
   const [errorMessages, setErrorMessages] = useState<string[]>([]);
+  const scanningRef = useRef<boolean>(scanning);
 
   const restartScanning = useCallback(async () => {
     try {
@@ -58,19 +72,22 @@ export const QrReader: React.FC = () => {
     }
   }, []);
   const scanQRCode = () => {
-    if (!videoRef.current || !canvasRef.current) {
+    if (!videoRef.current || !tmpCanvasRef.current || !scanningRef.current) {
       return;
     }
     try {
-      const imageData = drawVideoToCanvas(videoRef.current, canvasRef.current);
+      const imageData = drawVideoToCanvas(videoRef.current, tmpCanvasRef.current);
       const qrCodeData = decodeQRFromCanvas(imageData);
       if (!qrCodeData) {
         requestAnimationFrame(scanQRCode);
         return;
       }
-      setQrCode(qrCodeData);
-      setScanning(false);
-      stopStream(videoRef.current);
+      if (imgCanvasRef.current) {
+        drawVideoToCanvas(videoRef.current, imgCanvasRef.current);
+        drawRectToCanvas(imgCanvasRef.current, qrCodeData.location);
+      }
+      setQrCode(qrCodeData.data);
+      stopScanning();
     } catch (err) {
       setErrorMessages([...errorMessages, (err as Error).message]);
     }
@@ -91,16 +108,20 @@ export const QrReader: React.FC = () => {
   };
 
   useEffect(() => {
+    scanningRef.current = scanning;
     if (scanning) {
       requestAnimationFrame(scanQRCode);
     }
-    return stopScanning;
   }, [scanning]);
+  useEffect(() => {
+    return stopScanning;
+  }, []);
 
   return (
     <div>
       <video ref={videoRef} style={{ display: scanning ? 'block' : 'none' }} width="320" height="240" autoPlay />
-      <canvas ref={canvasRef} style={{ display: 'none' }} width="320" height="240" />
+      <canvas ref={imgCanvasRef} style={{ display: scanning ? 'none' : 'block' }} width="320" height="240" />
+      <canvas ref={tmpCanvasRef} style={{ display: 'none' }} width="320" height="240" />
       <div>
         <p>QR Code: {qrCode}</p>
         { scanning ? <button onClick={stopScanning}>スキャン停止</button> : <button onClick={restartScanning}>スキャン開始</button> }
