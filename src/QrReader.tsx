@@ -16,6 +16,9 @@ async function setCameraStream(videoElement: HTMLVideoElement, facingMode: 'user
 }
 // カメラの映像をCanvasに描画
 function drawVideoToCanvas(videoElement: HTMLVideoElement, context: CanvasRenderingContext2D) {
+  if (videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+    return null;
+  }
   if (context) {
     context.canvas.width = videoElement.videoWidth;
     context.canvas.height = videoElement.videoHeight;
@@ -78,15 +81,10 @@ export const QrReader: React.FC = () => {
     }
   }, []);
   const scanQRCode = () => {
-    if (
-      !videoRef.current ||
-      !tmpCanvasContext.current ||
-      !scanningRef.current ||
-      !videoRef.current.videoWidth ||
-      !videoRef.current.videoHeight
-    ) {
+    if (!videoRef.current || !tmpCanvasContext.current || !scanningRef.current) {
       return;
     }
+
     try {
       const imageData = drawVideoToCanvas(videoRef.current, tmpCanvasContext.current);
       const qrCodeData = decodeQRFromCanvas(imageData);
