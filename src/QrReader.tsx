@@ -15,17 +15,15 @@ async function setCameraStream(videoElement: HTMLVideoElement, facingMode: 'user
     });
 }
 // カメラの映像をCanvasに描画
-function drawVideoToCanvas(videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement) {
-  const context = canvasElement.getContext('2d');
+function drawVideoToCanvas(videoElement: HTMLVideoElement, context: CanvasRenderingContext2D) {
   if (context) {
-    context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-    return context.getImageData(0, 0, canvasElement.width, canvasElement.height);
+    context.drawImage(videoElement, 0, 0, context.canvas.width, context.canvas.height);
+    return context.getImageData(0, 0, context.canvas.width, context.canvas.height);
   }
   return null;
 }
 // Canvasに矩形を描画
-function drawRectToCanvas(canvasElement: HTMLCanvasElement, location: QRCode['location']) {
-  const context = canvasElement.getContext('2d');
+function drawRectToCanvas(context: CanvasRenderingContext2D , location: QRCode['location']) {
   if (context) {
     context.beginPath();
     context.moveTo(location.topLeftCorner.x, location.topLeftCorner.y);
@@ -55,6 +53,8 @@ export const QrReader: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const tmpCanvasRef = useRef<HTMLCanvasElement>(null);
   const imgCanvasRef = useRef<HTMLCanvasElement>(null);
+  const tmpCanvasContext = useRef<CanvasRenderingContext2D | null>(null);
+  const imgCanvasContext = useRef<CanvasRenderingContext2D | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [scanning, setScanning] = useState<boolean>(false);
   const [errorMessages, setErrorMessages] = useState<string[]>([]);
@@ -64,6 +64,8 @@ export const QrReader: React.FC = () => {
     try {
       setQrCode(null);
       setScanning(true);
+      tmpCanvasContext.current = tmpCanvasRef.current?.getContext('2d') ?? null;
+      imgCanvasContext.current = imgCanvasRef.current?.getContext('2d') ?? null;
       if (videoRef.current) {
         await setCameraStream(videoRef.current);
       }
@@ -72,19 +74,19 @@ export const QrReader: React.FC = () => {
     }
   }, []);
   const scanQRCode = () => {
-    if (!videoRef.current || !tmpCanvasRef.current || !scanningRef.current) {
+    if (!videoRef.current || !tmpCanvasContext.current || !scanningRef.current) {
       return;
     }
     try {
-      const imageData = drawVideoToCanvas(videoRef.current, tmpCanvasRef.current);
+      const imageData = drawVideoToCanvas(videoRef.current, tmpCanvasContext.current);
       const qrCodeData = decodeQRFromCanvas(imageData);
       if (!qrCodeData) {
         requestAnimationFrame(scanQRCode);
         return;
       }
-      if (imgCanvasRef.current) {
-        drawVideoToCanvas(videoRef.current, imgCanvasRef.current);
-        drawRectToCanvas(imgCanvasRef.current, qrCodeData.location);
+      if (imgCanvasContext.current) {
+        drawVideoToCanvas(videoRef.current, imgCanvasContext.current);
+        drawRectToCanvas(imgCanvasContext.current, qrCodeData.location);
       }
       setQrCode(qrCodeData.data);
       stopScanning();
@@ -98,6 +100,8 @@ export const QrReader: React.FC = () => {
     }
     try {
       setScanning(false);
+      tmpCanvasContext.current = null;
+      imgCanvasContext.current = null;
       if (!videoRef.current) {
         return;
       }
