@@ -59,6 +59,8 @@ export const QrReader: React.FC = () => {
   const [scanning, setScanning] = useState<boolean>(false);
   const [errorMessages, setErrorMessages] = useState<string[]>([]);
   const scanningRef = useRef<boolean>(scanning);
+  const [videoWidth, setVideoWidth] = useState<number>(0);
+  const [videoHeight, setVideoHeight] = useState<number>(0);
 
   const restartScanning = useCallback(async () => {
     try {
@@ -114,6 +116,10 @@ export const QrReader: React.FC = () => {
   useEffect(() => {
     scanningRef.current = scanning;
     if (scanning) {
+      if (videoRef.current) {
+        setVideoWidth(videoRef.current.videoWidth);
+        setVideoHeight(videoRef.current.videoHeight);
+      }
       requestAnimationFrame(scanQRCode);
     }
   }, [scanning]);
@@ -129,6 +135,9 @@ export const QrReader: React.FC = () => {
       <div>
         <p>QR Code: {qrCode}</p>
         { scanning ? <button onClick={stopScanning}>スキャン停止</button> : <button onClick={restartScanning}>スキャン開始</button> }
+      </div>
+      <div>
+        <p>Video Size: {videoWidth} x {videoHeight}</p>
       </div>
       <div>
         <ul>
