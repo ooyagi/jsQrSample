@@ -74,7 +74,7 @@ export const QrReader: React.FC = () => {
         await setCameraStream(videoRef.current);
       }
     } catch (err) {
-      setErrorMessages([...errorMessages, (err as Error).message]);
+      setErrorMessages([...errorMessages, (err as Error).message + (err as Error).stack]);
     }
   }, []);
   const scanQRCode = () => {
