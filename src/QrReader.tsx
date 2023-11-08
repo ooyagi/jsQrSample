@@ -6,6 +6,8 @@ async function setCameraStream(videoElement: HTMLVideoElement, facingMode: 'user
   return navigator.mediaDevices.getUserMedia({ video: { facingMode } })
     .then((stream) => {
       videoElement.srcObject = stream;
+      videoElement.setAttribute('playsinline', 'true');
+      videoElement.play();
     })
     .catch((err) => {
       console.error('カメラへのアクセスに失敗しました:', err);
