@@ -78,7 +78,13 @@ export const QrReader: React.FC = () => {
     }
   }, []);
   const scanQRCode = () => {
-    if (!videoRef.current || !tmpCanvasContext.current || !scanningRef.current) {
+    if (
+      !videoRef.current ||
+      !tmpCanvasContext.current ||
+      !scanningRef.current ||
+      !videoRef.current.videoWidth ||
+      !videoRef.current.videoHeight
+    ) {
       return;
     }
     try {
@@ -118,16 +124,18 @@ export const QrReader: React.FC = () => {
   useEffect(() => {
     scanningRef.current = scanning;
     if (scanning) {
-      if (videoRef.current) {
-        setVideoWidth(videoRef.current.videoWidth);
-        setVideoHeight(videoRef.current.videoHeight);
-      }
       requestAnimationFrame(scanQRCode);
     }
   }, [scanning]);
   useEffect(() => {
     return stopScanning;
   }, []);
+  useEffect(() => {
+      if (videoRef.current) {
+        setVideoWidth(videoRef.current.videoWidth);
+        setVideoHeight(videoRef.current.videoHeight);
+      }
+  }, [videoRef.current?.videoWidth, videoRef.current?.videoHeight]);
 
   return (
     <div>
