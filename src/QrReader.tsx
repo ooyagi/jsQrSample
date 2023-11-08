@@ -27,7 +27,7 @@ function drawVideoToCanvas(videoElement: HTMLVideoElement, context: CanvasRender
   }
   return null;
 }
-function drawVideoToImgCanvas(videoElement: HTMLVideoElement, context: CanvasRenderingContext2D, videoViewWidth: number, videoViewHeight: number): number {
+function drawVideoToImgCanvas(videoElement: HTMLVideoElement, context: CanvasRenderingContext2D, videoViewWidth: number, videoViewHeight: number): VideoDrawResult {
   const { videoWidth, videoHeight } = videoElement;
   const scale = Math.min(videoViewWidth / videoWidth, videoViewHeight / videoHeight);
   const vidH = videoHeight * scale;
@@ -36,17 +36,17 @@ function drawVideoToImgCanvas(videoElement: HTMLVideoElement, context: CanvasRen
   const top = (videoViewHeight - vidH) / 2;
 
   context.drawImage(videoElement, left, top, vidW, vidH);
-  return scale;
+  return { scale, offsetX: left, offsetY: top };
 }
 
 // Canvasに矩形を描画
-function drawRectToCanvas(context: CanvasRenderingContext2D , location: QRCode['location'], scale: number) {
+function drawRectToCanvas(context: CanvasRenderingContext2D , location: QRCode['location'], drawResult: VideoDrawResult) {
   if (context) {
     context.beginPath();
-    context.moveTo(location.topLeftCorner.x * scale, location.topLeftCorner.y * scale);
-    context.lineTo(location.topRightCorner.x * scale, location.topRightCorner.y * scale);
-    context.lineTo(location.bottomRightCorner.x * scale, location.bottomRightCorner.y * scale);
-    context.lineTo(location.bottomLeftCorner.x * scale, location.bottomLeftCorner.y * scale);
+    context.moveTo(location.topLeftCorner.x * drawResult.scale + drawResult.offsetX, location.topLeftCorner.y * drawResult.scale + drawResult.offsetY);
+    context.lineTo(location.topRightCorner.x * drawResult.scale + drawResult.offsetX, location.topRightCorner.y * drawResult.scale + drawResult.offsetY);
+    context.lineTo(location.bottomRightCorner.x * drawResult.scale + drawResult.offsetX, location.bottomRightCorner.y * drawResult.scale + drawResult.offsetY);
+    context.lineTo(location.bottomLeftCorner.x * drawResult.scale + drawResult.offsetX, location.bottomLeftCorner.y * drawResult.scale + drawResult.offsetY);
     context.closePath();
 
     context.lineWidth = 5;
@@ -66,6 +66,12 @@ const stopStream = (videoElement: HTMLVideoElement) => {
     tracks.forEach(track => track.stop());
   }
 };
+
+interface VideoDrawResult {
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+}
 
 export interface QrReaderProps {
   videoViewWidth: number;
@@ -156,7 +162,7 @@ export const QrReader: React.FC<QrReaderProps> = ({ videoViewWidth, videoViewHei
   return (
     <div>
       <video ref={videoRef} style={{ display: scanning ? 'block' : 'none' }} width={videoViewWidth} height={videoViewHeight} autoPlay />
-      <canvas ref={imgCanvasRef} style={{ display: scanning ? 'none' : 'block', border: 'solid ' }} width={videoViewWidth} height={videoViewHeight} />
+      <canvas ref={imgCanvasRef} style={{ display: scanning ? 'none' : 'block' }} width={videoViewWidth} height={videoViewHeight} />
       <canvas ref={tmpCanvasRef} style={{ display: 'none' }} />
       <div>
         <p>QR Code: {qrCode}</p>
