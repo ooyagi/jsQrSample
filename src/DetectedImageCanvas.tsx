@@ -24,6 +24,8 @@ async function drawImageDataToCanvas(imageData: ImageData, context: CanvasRender
   const left = (videoViewWidth - vidW) / 2;
   const top = (videoViewHeight - vidH) / 2;
 
+  console.log('drawImageDataToCanvas', { width, height, scale, vidW, vidH, left, top });
+
   context.clearRect(0, 0, context.canvas.width, context.canvas.height);
   context.drawImage(image, left, top, vidW, vidH);
   return { scale, offsetX: left, offsetY: top };
@@ -55,6 +57,15 @@ export const DetectedImageCanvas: React.FC<DetectedImageCanvasProps> = (props: D
     try {
       const drawResult = await drawImageDataToCanvas(props.imageData, canvasContext.current as CanvasRenderingContext2D, props.videoViewWidth, props.videoViewHeight);
       drawRectToCanvas(canvasContext.current, props.location, drawResult);
+      errorHandler(new Error('[' +
+        props.imageData.width.toString() + ', ' +
+        props.imageData.height.toString() + ', ' +
+        props.videoViewWidth.toString() + ', ' +
+        props.videoViewHeight.toString() + '] [' +
+        drawResult.scale.toString() + ', ' +
+        drawResult.offsetX.toString() + ', ' +
+        drawResult.offsetY.toString() + ']'
+      ));
     } catch (err) {
       errorHandler(err as Error);
     }
