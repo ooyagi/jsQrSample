@@ -41,7 +41,7 @@ function drawRectToCanvas(canvasElement: HTMLCanvasElement, location: QRCode['lo
 }
 // CanvasからQRコードを解析
 function decodeQRFromCanvas(imageData: ImageData | null): QRCode | null {
-  return imageData ? jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' }) : null;
+  return imageData ? jsQR(imageData.data, imageData.width, imageData.height) : null;
 }
 // ストリームを停止
 const stopStream = (videoElement: HTMLVideoElement) => {
