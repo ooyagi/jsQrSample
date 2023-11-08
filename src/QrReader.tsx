@@ -17,6 +17,8 @@ async function setCameraStream(videoElement: HTMLVideoElement, facingMode: 'user
 // カメラの映像をCanvasに描画
 function drawVideoToCanvas(videoElement: HTMLVideoElement, context: CanvasRenderingContext2D) {
   if (context) {
+    context.canvas.width = videoElement.videoWidth;
+    context.canvas.height = videoElement.videoHeight;
     context.drawImage(videoElement, 0, 0, context.canvas.width, context.canvas.height);
     return context.getImageData(0, 0, context.canvas.width, context.canvas.height);
   }
