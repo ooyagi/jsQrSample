@@ -27,21 +27,34 @@ function drawVideoToCanvas(videoElement: HTMLVideoElement, context: CanvasRender
   }
   return null;
 }
+function drawVideoToImgCanvas(videoElement: HTMLVideoElement, context: CanvasRenderingContext2D, videoViewWidth: number, videoViewHeight: number): number {
+  const { videoWidth, videoHeight } = videoElement;
+  const scale = Math.min(videoViewWidth / videoWidth, videoViewHeight / videoHeight);
+  const vidH = videoHeight * scale;
+  const vidW = videoWidth * scale;
+  const left = (videoViewWidth - vidW) / 2;
+  const top = (videoViewHeight - vidH) / 2;
+
+  context.drawImage(videoElement, left, top, vidW, vidH);
+  return scale;
+}
+
 // Canvasに矩形を描画
-function drawRectToCanvas(context: CanvasRenderingContext2D , location: QRCode['location']) {
+function drawRectToCanvas(context: CanvasRenderingContext2D , location: QRCode['location'], scale: number) {
   if (context) {
     context.beginPath();
-    context.moveTo(location.topLeftCorner.x, location.topLeftCorner.y);
-    context.lineTo(location.topRightCorner.x, location.topRightCorner.y);
-    context.lineTo(location.bottomRightCorner.x, location.bottomRightCorner.y);
-    context.lineTo(location.bottomLeftCorner.x, location.bottomLeftCorner.y);
-    context.lineTo(location.topLeftCorner.x, location.topLeftCorner.y);
+    context.moveTo(location.topLeftCorner.x * scale, location.topLeftCorner.y * scale);
+    context.lineTo(location.topRightCorner.x * scale, location.topRightCorner.y * scale);
+    context.lineTo(location.bottomRightCorner.x * scale, location.bottomRightCorner.y * scale);
+    context.lineTo(location.bottomLeftCorner.x * scale, location.bottomLeftCorner.y * scale);
+    context.closePath();
 
     context.lineWidth = 5;
     context.strokeStyle = 'red';
     context.stroke();
   }
 }
+
 // CanvasからQRコードを解析
 function decodeQRFromCanvas(imageData: ImageData | null): QRCode | null {
   return imageData ? jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' }) : null;
@@ -54,7 +67,12 @@ const stopStream = (videoElement: HTMLVideoElement) => {
   }
 };
 
-export const QrReader: React.FC = () => {
+export interface QrReaderProps {
+  videoViewWidth: number;
+  videoViewHeight: number;
+}
+
+export const QrReader: React.FC<QrReaderProps> = ({ videoViewWidth, videoViewHeight }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const tmpCanvasRef = useRef<HTMLCanvasElement>(null);
   const imgCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -93,8 +111,8 @@ export const QrReader: React.FC = () => {
         return;
       }
       if (imgCanvasContext.current) {
-        drawVideoToCanvas(videoRef.current, imgCanvasContext.current);
-        drawRectToCanvas(imgCanvasContext.current, qrCodeData.location);
+        const scale = drawVideoToImgCanvas(videoRef.current, imgCanvasContext.current, videoViewWidth, videoViewHeight);
+        drawRectToCanvas(imgCanvasContext.current, qrCodeData.location, scale);
       }
       setQrCode(qrCodeData.data);
       stopScanning();
@@ -137,9 +155,9 @@ export const QrReader: React.FC = () => {
 
   return (
     <div>
-      <video ref={videoRef} style={{ display: scanning ? 'block' : 'none' }} width="320" height="240" autoPlay />
-      <canvas ref={imgCanvasRef} style={{ display: scanning ? 'none' : 'block' }} width="320" height="240" />
-      <canvas ref={tmpCanvasRef} style={{ display: 'none' }} width="320" height="240" />
+      <video ref={videoRef} style={{ display: scanning ? 'block' : 'none' }} width={videoViewWidth} height={videoViewHeight} autoPlay />
+      <canvas ref={imgCanvasRef} style={{ display: scanning ? 'none' : 'block' }} width={videoViewWidth} height={videoViewHeight} />
+      <canvas ref={tmpCanvasRef} style={{ display: 'none' }} />
       <div>
         <p>QR Code: {qrCode}</p>
         { scanning ? <button onClick={stopScanning}>スキャン停止</button> : <button onClick={restartScanning}>スキャン開始</button> }
