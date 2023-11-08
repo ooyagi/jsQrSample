@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import jsQR from 'jsqr';
 
 // カメラへのアクセスを要求し、videoRefにストリームを設定
@@ -41,39 +41,55 @@ export const QrReader: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
 
-  useEffect(() => {
+  const restartScanning = useCallback(() => {
+    setQrCode(null);
+    setScanning(true);
     if (videoRef.current) {
       setCameraStream(videoRef.current);
     }
-
-    // QRコードをスキャンする関数
-    const scanQRCode = () => {
-      if (!videoRef.current || !canvasRef.current) {
-        return;
-      }
-      const imageData = drawVideoToCanvas(videoRef.current, canvasRef.current);
-      const qrCodeData = decodeQRFromCanvas(imageData);
-        
-      if (qrCodeData) {
-        setQrCode(qrCodeData);
-        stopStream(videoRef.current);
-      } else {
-        requestAnimationFrame(scanQRCode);
-      }
-    };
-    requestAnimationFrame(scanQRCode);
-
-    return () => {
-      stopStream(videoRef.current!);
-    };
   }, []);
+  const scanQRCode = () => {
+    if (!videoRef.current || !canvasRef.current) {
+      return;
+    }
+    const imageData = drawVideoToCanvas(videoRef.current, canvasRef.current);
+    const qrCodeData = decodeQRFromCanvas(imageData);
+    if (!qrCodeData) {
+      requestAnimationFrame(scanQRCode);
+      return;
+    }
+    setQrCode(qrCodeData);
+    setScanning(false);
+    stopStream(videoRef.current);
+  };
+  const stopScanning = () => {
+    if (!scanning) {
+      return;
+    }
+    setScanning(false);
+    if (!videoRef.current) {
+      return;
+    }
+    stopStream(videoRef.current!);
+  };
+
+  useEffect(() => {
+    if (scanning) {
+      requestAnimationFrame(scanQRCode);
+    }
+    return stopScanning;
+  }, [scanning]);
 
   return (
     <div>
-      <video ref={videoRef} style={{ display: 'block' }} width="320" height="240" autoPlay />
+      <video ref={videoRef} style={{ display: scanning ? 'block' : 'none' }} width="320" height="240" autoPlay />
       <canvas ref={canvasRef} style={{ display: 'none' }} width="320" height="240" />
-      {qrCode && <p>QR Code: {qrCode}</p>}
+      <div>
+        <p>QR Code: {qrCode}</p>
+        { scanning ? <button onClick={stopScanning}>スキャン停止</button> : <button onClick={restartScanning}>スキャン開始</button> }
+      </div>
     </div>
   );
 };
