@@ -26,7 +26,7 @@ function drawVideoToCanvas(videoElement: HTMLVideoElement, canvasElement: HTMLCa
 // CanvasからQRコードを解析
 function decodeQRFromCanvas(imageData: ImageData | null): string | null {
   if (imageData) {
-    const qrCode = jsQR(imageData.data, imageData.width, imageData.height);
+    const qrCode = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
     return qrCode ? qrCode.data : null;
   }
   return null;
