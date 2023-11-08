@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import jsQR from 'jsqr';
 
 // カメラへのアクセスを要求し、videoRefにストリームを設定
-function setCameraStream(videoElement: HTMLVideoElement, facingMode: 'user' | 'environment' = 'environment'): Promise<void> {
+async function setCameraStream(videoElement: HTMLVideoElement, facingMode: 'user' | 'environment' = 'environment'): Promise<void> {
   return navigator.mediaDevices.getUserMedia({ video: { facingMode } })
     .then((stream) => {
       videoElement.srcObject = stream;
@@ -42,37 +42,50 @@ export const QrReader: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [errorMessages, setErrorMessages] = useState<string[]>([]);
 
-  const restartScanning = useCallback(() => {
-    setQrCode(null);
-    setScanning(true);
-    if (videoRef.current) {
-      setCameraStream(videoRef.current);
+  const restartScanning = useCallback(async () => {
+    try {
+      setQrCode(null);
+      setScanning(true);
+      if (videoRef.current) {
+        await setCameraStream(videoRef.current);
+      }
+    } catch (err) {
+      setErrorMessages([...errorMessages, (err as Error).message]);
     }
   }, []);
   const scanQRCode = () => {
     if (!videoRef.current || !canvasRef.current) {
       return;
     }
-    const imageData = drawVideoToCanvas(videoRef.current, canvasRef.current);
-    const qrCodeData = decodeQRFromCanvas(imageData);
-    if (!qrCodeData) {
-      requestAnimationFrame(scanQRCode);
-      return;
+    try {
+      const imageData = drawVideoToCanvas(videoRef.current, canvasRef.current);
+      const qrCodeData = decodeQRFromCanvas(imageData);
+      if (!qrCodeData) {
+        requestAnimationFrame(scanQRCode);
+        return;
+      }
+      setQrCode(qrCodeData);
+      setScanning(false);
+      stopStream(videoRef.current);
+    } catch (err) {
+      setErrorMessages([...errorMessages, (err as Error).message]);
     }
-    setQrCode(qrCodeData);
-    setScanning(false);
-    stopStream(videoRef.current);
   };
   const stopScanning = () => {
     if (!scanning) {
       return;
     }
-    setScanning(false);
-    if (!videoRef.current) {
-      return;
+    try {
+      setScanning(false);
+      if (!videoRef.current) {
+        return;
+      }
+      stopStream(videoRef.current!);
+    } catch (err) {
+      setErrorMessages([...errorMessages, (err as Error).message]);
     }
-    stopStream(videoRef.current!);
   };
 
   useEffect(() => {
@@ -89,6 +102,11 @@ export const QrReader: React.FC = () => {
       <div>
         <p>QR Code: {qrCode}</p>
         { scanning ? <button onClick={stopScanning}>スキャン停止</button> : <button onClick={restartScanning}>スキャン開始</button> }
+      </div>
+      <div>
+        <ul>
+          {errorMessages.map((message, i) => <li key={i}>{message}</li>)}
+        </ul>
       </div>
     </div>
   );
